@@ -220,15 +220,15 @@ def prototype_phrase_state():
 
     state = prototype_state()
 
-    state['source'] = ["/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/binarized_pp1.fr.shuf.h5"]
-    state['target'] = ["/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/binarized_pp2.fr.shuf.h5"]
-    state['indx_word'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/ivocab.pp1.pkl"
-    state['indx_word_target'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/ivocab.pp2.pkl"
-    state['word_indx'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/vocab.pp1.pkl"
-    state['word_indx_trgt'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/vocab.pp2.pkl"
+    state['source'] = ["/data/lisatmp3/bahdanau/shuffled/phrase-table.en.h5"]
+    state['target'] = ["/data/lisatmp3/bahdanau/shuffled/phrase-table.fr.h5"]
+    state['indx_word'] = "/data/lisatmp3/chokyun/mt/ivocab_source.pkl"
+    state['indx_word_target'] = "/data/lisatmp3/chokyun/mt/ivocab_target.pkl"
+    state['word_indx'] = "/data/lisatmp3/chokyun/mt/vocab.en.pkl"
+    state['word_indx_trgt'] = "/data/lisatmp3/bahdanau/vocab.fr.pkl"
 
-    state['null_sym_source'] = 4898
-    state['null_sym_target'] = 13931
+    state['null_sym_source'] = 15000
+    state['null_sym_target'] = 15000
     state['n_sym_source'] = state['null_sym_source'] + 1
     state['n_sym_target'] = state['null_sym_target'] + 1
 
@@ -240,23 +240,23 @@ def prototype_encdec_state():
 
     state = prototype_state()
 
-    state['target'] = ["/SSD/siahbanim/GroudHog/lc-train/selected30/binarized_text.en.shuf.h5"]
-    state['source'] = ["/SSD/siahbanim/GroudHog/lc-train/selected30/binarized_text.fr.shuf.h5"]
-    state['indx_word'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/ivocab.fr.pkl"
-    state['indx_word_target'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/ivocab.en.pkl"
-    state['word_indx'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/vocab.fr.pkl"
-    state['word_indx_trgt'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/vocab.en.pkl"
+    state['target'] = ["/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/binarized_text.shuffled.fr.h5"]
+    state['source'] = ["/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/binarized_text.shuffled.en.h5"]
+    state['indx_word'] = "/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/ivocab.en.pkl"
+    state['indx_word_target'] = "/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/ivocab.fr.pkl"
+    state['word_indx'] = "/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/vocab.en.pkl"
+    state['word_indx_trgt'] = "/data/lisatmp3/chokyun/mt/vocab.unlimited/bitexts.selected/vocab.fr.pkl"
 
-    state['null_sym_source'] = 5000
-    state['null_sym_target'] = 4000
+    state['null_sym_source'] = 30000
+    state['null_sym_target'] = 30000
     state['n_sym_source'] = state['null_sym_source'] + 1
     state['n_sym_target'] = state['null_sym_target'] + 1
 
     state['seqlen'] = 30
     state['bs']  = 80
 
-    state['dim'] = 500
-    state['rank_n_approx'] = 300
+    state['dim'] = 1000
+    state['rank_n_approx'] = 620
 
     state['prefix'] = 'encdec_'
 
