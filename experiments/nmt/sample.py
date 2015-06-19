@@ -199,6 +199,8 @@ def parse_args():
             action="store_true", help="Beam size, turns on beam-search")
     parser.add_argument("--beam-size",
             type=int, help="Beam size")
+    parser.add_argument("--skipInput",
+            type=int, help="skip first N input sentences")
     parser.add_argument("--ignore-unk",
             default=False, action="store_true",
             help="Ignore unknown words")
@@ -228,7 +230,7 @@ def main():
     state.update(eval("dict({})".format(args.changes)))
 
     logging.basicConfig(level=getattr(logging, state['level']), format="%(asctime)s: %(name)s: %(levelname)s: %(message)s")
-
+    
     rng = numpy.random.RandomState(state['seed'])
     enc_dec = RNNEncoderDecoder(state, rng, skip_init=True)
     enc_dec.build()
@@ -260,6 +262,7 @@ def main():
         total_cost = 0.0
         logging.debug("Beam size: {}".format(n_samples))
         for i, line in enumerate(fsrc):
+            if i < args.skipInput: continue
             seqin = line.strip()
             seq, parsed_in = parse_input(state, indx_word, seqin, idx2word=idict_src)
             if args.verbose:
