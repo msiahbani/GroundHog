@@ -54,6 +54,8 @@ parser.add_argument("-t", "--char", action="store_true",
                     help="character-level processing")
 parser.add_argument("-l", "--lowercase", action="store_true",
                     help="lowercase")
+parser.add_argument("-r", "--reverse-sent", action="store_true",
+                    help="reverse sentences (input)")
 
 
 def open_files():
@@ -184,7 +186,8 @@ def binarize():
     for input_file, base_filename, sentence_count in \
             zip(args.input, base_filenames, sentence_counts):
         input_filename = os.path.basename(input_file.name)
-        logger.info("Binarizing %s." % (input_filename))
+        if args.reverse_sent: logger.info("Reversing and binarizing %s." % (input_filename))
+        else:                 logger.info("Binarizing %s." % (input_filename))
         binarized_corpus = []
         ngram_count = 0
         for sentence_count, sentence in enumerate(input_file):
@@ -194,6 +197,8 @@ def binarize():
                 words = list(sentence.strip().decode('utf-8'))
             else:
                 words = sentence.strip().split(' ')
+                if args.reverse_sent: words.reverse()
+
             binarized_sentence = [vocab.get(word, 1) for word in words]
             binarized_corpus.append(binarized_sentence)
             if args.ngram:
