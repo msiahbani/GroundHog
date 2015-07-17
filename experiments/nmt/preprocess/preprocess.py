@@ -32,6 +32,8 @@ parser.add_argument("-b", "--binarized-text", default='binarized_text.pkl',
                     help="the name of the pickled binarized text file")
 parser.add_argument("-d", "--dictionary", default='vocab.pkl',
                     help="the name of the pickled binarized text file")
+parser.add_argument("--save-vocab", default=None,
+                    help="the name of the binary text file to save the dictionary")
 parser.add_argument("-n", "--ngram", type=int, metavar="N",
                     help="create n-grams")
 parser.add_argument("-v", "--vocab", type=int, metavar="N",
@@ -160,6 +162,7 @@ def create_dictionary():
             logger.info('Building a dictionary with all unique words')
             args.vocab = len(combined_counter) + 2
         vocab_count = combined_counter.most_common(args.vocab - 2)
+        #print "size of vocab_count 1:   ", len(vocab_count)
         logger.info("Creating dictionary of %s most common words, covering "
                     "%2.1f%% of the text."
                     % (args.vocab,
@@ -167,11 +170,17 @@ def create_dictionary():
                        sum(combined_counter.values())))
     else:
         logger.info("Creating dictionary of all words")
-        vocab_count = counter.most_common()
+        vocab_count = combined_counter.most_common()
+        #print "size of vocab_count 2:   ", len(vocab_count)
     vocab = {'UNK': 1, '<s>': 0, '</s>': 0}
     for i, (word, count) in enumerate(vocab_count):
         vocab[word] = i + 2
     safe_pickle(vocab, args.dictionary)
+    #print "size of vocab_count:   ", len(vocab_count)
+    if args.save_vocab:
+        fin = open(args.save_vocab,"wb")
+        for (word, count) in vocab_count: fin.write("%s %d\n" %(word,count))
+        fin.close()
     return combined_counter, sentence_counts, counters, vocab
 
 
