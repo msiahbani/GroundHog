@@ -220,17 +220,19 @@ def prototype_phrase_state():
 
     state = prototype_state()
 
-    state['source'] = ["/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/binarized_pp1.fr.shuf.h5"]
-    state['target'] = ["/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/binarized_pp2.fr.shuf.h5"]
-    state['indx_word'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/ivocab.pp1.pkl"
-    state['indx_word_target'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/ivocab.pp2.pkl"
-    state['word_indx'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/vocab.pp1.pkl"
-    state['word_indx_trgt'] = "/SSD/siahbanim/NNPP/europarl/oov-dp-phrL2-pphrL3-w4/vocab.pp2.pkl"
+    state['source'] = ["/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/binarized_pp1.fr.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/binarized_pp2.fr.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/ivocab.pp1.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/ivocab.pp2.pkl"
+    state['word_indx'] = "/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/vocab.pp1.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/NNPP/europarl/pp-dp-phrL2-pphrL3-w4-test-all/vocab.pp2.pkl"
 
-    state['null_sym_source'] = 4898
-    state['null_sym_target'] = 13931
+    state['null_sym_source'] = 6177
+    state['null_sym_target'] = 9826
     state['n_sym_source'] = state['null_sym_source'] + 1
     state['n_sym_target'] = state['null_sym_target'] + 1
+    state['timeStop'] = 24*60*5
+    state['seqlen'] = 3
 
     return state
 
@@ -240,25 +242,25 @@ def prototype_encdec_state():
 
     state = prototype_state()
 
-    state['target'] = ["/SSD/siahbanim/GroudHog/lc-train/selected30/binarized_text.en.shuf.h5"]
-    state['source'] = ["/SSD/siahbanim/GroudHog/lc-train/selected30/binarized_text.fr.shuf.h5"]
-    state['indx_word'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/ivocab.fr.pkl"
-    state['indx_word_target'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/ivocab.en.pkl"
-    state['word_indx'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/vocab.fr.pkl"
-    state['word_indx_trgt'] = "/SSD/siahbanim/GroudHog/lc-train/selected30/vocab.en.pkl"
+    state['source'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/binarized_text.en.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/binarized_text.fr.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/ivocab.en.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/ivocab.fr.pkl"
+    state['word_indx'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/vocab.en.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/bitexts.selected/selected50/vocab.fr.pkl"
 
-    state['null_sym_source'] = 5000
-    state['null_sym_target'] = 4000
+    state['null_sym_source'] = 30000
+    state['null_sym_target'] = 30000
     state['n_sym_source'] = state['null_sym_source'] + 1
     state['n_sym_target'] = state['null_sym_target'] + 1
 
-    state['seqlen'] = 30
+    state['seqlen'] = 50
     state['bs']  = 80
 
-    state['dim'] = 500
+    state['dim'] = 1000
     state['rank_n_approx'] = 300
 
-    state['prefix'] = 'encdec_'
+    state['prefix'] = 'encdec50_'
 
     return state
 
@@ -273,14 +275,49 @@ def prototype_search_state():
     state['last_forward'] = False
     state['forward'] = True
     state['backward'] = True
-    state['seqlen'] = 50
     state['sort_k_batches'] = 20
-    state['prefix'] = 'search_'
+    state['prefix'] = 'search50_'
+
+    return state
+
+def prototype_search_state_embd():
+    """This prototype is the configuration used to train the RNNsearch-50 model from the paper
+    'Neural Machine Translation by Jointly Learning to Align and Translate' """
+
+    state = prototype_encdec_state()
+
+    state['dec_rec_layer'] = 'RecurrentLayerWithSearch'
+    state['search'] = True
+    state['last_forward'] = False
+    state['forward'] = True
+    state['backward'] = True
+    state['sort_k_batches'] = 20
+    state['prefix'] = 'search50_'
+
+
+    state['source'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/binarized_text.en.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/binarized_text.fr.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/ivocab.en.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/ivocab.fr.pkl"
+    state['word_indx'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/vocab.en.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/vocab.fr.pkl"
+    state['null_sym_source'] = 78584
+    state['n_sym_source'] = state['null_sym_source'] + 1
+    state['load_embd'] = True
+    state['reload'] = False
 
     return state
 
 def prototype_phrase_lstm_state():
-    state = prototype_phrase_state()
+    #state = prototype_phrase_state()
+    state = prototype_encdec_state()
+
+    state['source'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/binarized_text.en.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/binarized_text.fr.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/ivocab.en.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/ivocab.fr.pkl"
+    state['word_indx'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/vocab.en.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/vocab.fr.pkl"
 
     state['enc_rec_layer'] = 'LSTMLayer'
     state['enc_rec_gating'] = False
@@ -289,6 +326,7 @@ def prototype_phrase_lstm_state():
     state['dec_rec_gating'] = False
     state['dec_rec_reseting'] = False
     state['dim_mult'] = 4
-    state['prefix'] = 'phrase_lstm_'
+    state['sort_k_batches'] = 20
+    state['prefix'] = 'encdec50_lstm_'
 
     return state

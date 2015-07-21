@@ -4,7 +4,7 @@ W_DIR="$1"
 VocabSize=$2
 
 echo "Process of input files"
-python preprocess.py -d $W_DIR/vocab.en.pkl -v $VocabSize -b $W_DIR/binarized_text.en.pkl -p $W_DIR/*.en -r
+python preprocess.py -d $W_DIR/vocab.en.pkl -v $VocabSize -b $W_DIR/binarized_text.en.pkl -p $W_DIR/*.en -r # --embd-file $W_DIR/vectors.bin 
 
 python invert-dict.py $W_DIR/vocab.en.pkl $W_DIR/ivocab.en.pkl
 

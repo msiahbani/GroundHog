@@ -185,6 +185,26 @@ class Container(object):
         if len(unknown):
             logger.error("Unknown parameters {} given".format(unknown))
 
+    def load_embd(self, filename):
+        """
+        Load embading layer of the model.
+        """
+        logger.debug('Loading embedding layer in encoder')
+        vals = numpy.load(filename)
+        for p in self.params:
+            if p.name in vals:
+                logger.debug('Loading {} of {}'.format(p.name, p.get_value(borrow=True).shape))
+                if p.get_value().shape != vals[p.name].shape:
+                    raise Exception("Shape mismatch: {} != {} for {}".format(p.get_value().shape, vals[p.name].shape, p.name))
+                p.set_value(vals[p.name])
+            else:
+                # FIXME: do not stop loading even if there's a parameter value missing
+                #raise Exception("No parameter {} given".format(p.name))
+                logger.error( "No parameter {} of shape {} given: default initialization used".format(p.name, p.get_value(borrow=True).shape))
+        unknown = set(vals.keys())
+        if len(unknown):
+            logger.debug("Given parameters: {}".format(unknown))
+
 class Layer(Container):
     """
     Parent class for Layers.

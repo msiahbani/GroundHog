@@ -255,6 +255,13 @@ class MainLoop(object):
             print 'mainLoop: Corrupted timings file'
             traceback.print_exc()
 
+    def load_embd(self, embd_path=None):
+        try:
+            self.model.load_embd(embd_path)
+        except Exception:
+            print 'mainLoop: Corrupted embedding file'
+            traceback.print_exc()
+
     def main(self):
         assert self.reset == -1
 

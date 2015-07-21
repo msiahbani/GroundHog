@@ -7,7 +7,7 @@ import bz2
 import logging
 import os
 
-import numpy
+import numpy, theano
 import tables
 
 from collections import Counter
@@ -34,6 +34,8 @@ parser.add_argument("-d", "--dictionary", default='vocab.pkl',
                     help="the name of the pickled binarized text file")
 parser.add_argument("--save-vocab", default=None,
                     help="the name of the binary text file to save the dictionary")
+parser.add_argument("--embd-file", default=None,
+                    help="the name of the embedding file")
 parser.add_argument("-n", "--ngram", type=int, metavar="N",
                     help="create n-grams")
 parser.add_argument("-v", "--vocab", type=int, metavar="N",
@@ -108,7 +110,51 @@ def safe_hdf(array, name):
                                 array.shape, filters=filters)
             ds[:] = array
 
+def load_embd(filename, vocab_dict):
+    inF = open(args.embd_file, "rb")
+    rng = numpy.random.RandomState(1234)
+    vector_size = 300
+    vocab = []
+    embd_matrix = []
+    embd_matrix.append([0.0 for j in range(vector_size)])  #</s> <s> vector
+    embd_matrix.append([0.0 for j in range(vector_size)])  #UNK vector
+    first_line = inF.readline()
+    for line in inF:
+        line = line.strip().split()
+        try: 
+          if line[0] in vocab_dict:
+            try:
+                assert len(line) == 301
+                embd_matrix.append([float(j) for j in line[1:]])
+                vocab.append(line[0])
+            except:
+                print line
+                continue
+          elif line[0] == "</s>": 
+            print "fill the </s> vector"
+            embd_matrix[0] = [float(j) for j in line[1:]]
+        except:
+              print "line is: %s" %line
+    word_size = len(vocab)+3
+    logger.info("Total number of words in vocab %s" % word_size)
+    null_symbol = list( numpy.asarray( 
+         rng.uniform(
+              low=-numpy.sqrt(6. / (word_size + vector_size)),
+              high=numpy.sqrt(6. / (word_size + vector_size)),
+              size=(vector_size)
+         ),
+         dtype=theano.config.floatX
+       ) )
+    embd_matrix.append(null_symbol)
+    
+    embd_array = numpy.array(embd_matrix, dtype=theano.config.floatX)
+    print embd_array.shape
+    embd_bias = numpy.zeros(vector_size, dtype=theano.config.floatX)
+    vals = {"W_0_enc_approx_embdr": embd_array, "b_0_enc_approx_embdr": embd_bias}
+    numpy.savez(filename, **vals)
+    return vocab
 
+        
 def create_dictionary():
     # Part I: Counting the words
     counters = []
@@ -155,7 +201,7 @@ def create_dictionary():
                    sum(combined_counter.values())))
     if args.count:
         safe_pickle(combined_counter, 'combined.count.pkl')
-
+    vocab_word = None
     # Part III: Creating the dictionary
     if args.vocab is not None:
         if args.vocab <= 2:
@@ -169,12 +215,24 @@ def create_dictionary():
                        100.0 * sum([count for word, count in vocab_count]) /
                        sum(combined_counter.values())))
     else:
-        logger.info("Creating dictionary of all words")
         vocab_count = combined_counter.most_common()
-        #print "size of vocab_count 2:   ", len(vocab_count)
+        if args.embd_file is not None:
+            #FIXME
+            vocab_word = load_embd("embedding.npz", dict(vocab_count))
+            logger.info("Creating dictionary of given embedding file, containing %d words, covering "
+                    "%2.1f%% of the text."
+                    % (len(vocab_word)+2,
+                       100.0 * sum([count for word, count in vocab_count]) /
+                       sum(combined_counter.values())))
+        else:
+            logger.info("Creating dictionary of all words")
     vocab = {'UNK': 1, '<s>': 0, '</s>': 0}
-    for i, (word, count) in enumerate(vocab_count):
-        vocab[word] = i + 2
+    if vocab_word:
+        for i, word in enumerate(vocab_word):
+            vocab[word] = i + 2
+    else:
+        for i, (word, count) in enumerate(vocab_count):
+            vocab[word] = i + 2
     safe_pickle(vocab, args.dictionary)
     #print "size of vocab_count:   ", len(vocab_count)
     if args.save_vocab:

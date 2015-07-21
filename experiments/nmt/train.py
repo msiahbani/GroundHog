@@ -91,6 +91,8 @@ def main():
             hooks=[RandomSamplePrinter(state, lm_model, train_data)]
                 if state['hookFreq'] >= 0
                 else None)
+    if state['load_embd']:
+        main.load_embd("embedding.npz")
     if state['reload']:
         main.load()
     if state['loopIters'] > 0:
