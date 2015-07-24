@@ -68,6 +68,9 @@ class SGD(object):
                                 name=p.name+'_d2')
                    for p in model.params]
 
+        logger.debug('number of parameters: {}'.format(len(model.params)))
+
+
         self.step = 0
         self.bs = bs
         self.state = state
@@ -138,12 +141,19 @@ class SGD(object):
                 for p, g, gn2, dn2 in
                 zip(model.params, self.gs, self.gnorm2, self.dnorm2)]
 
-        updates = zip(model.params, new_params)
+        #updates = zip(model.params, new_params)
+        updates = [(p, new_p) for p,new_p in
+                zip(model.params, new_params)
+                if p.name not in self.state['frozen_params']
+                ]
         # d2
         d2_up = [(dn2, rho * dn2 + (1. - rho) *
             (((TT.sqrt(dn2 + eps) / TT.sqrt(gn2 + eps)) * g) ** 2.))
             for dn2, gn2, g in zip(self.dnorm2, self.gnorm2, self.gs)]
         updates = updates + d2_up
+
+        logger.debug('Construct update_fn')
+        logger.debug('number of updates: {}'.format(len(updates)))
 
         self.update_fn = theano.function(
             [], [], name='update_function',

@@ -566,13 +566,28 @@ class EncoderDecoderBase(object):
 
     def _create_embedding_layers(self):
         logger.debug("_create_embedding_layers")
+        #self.approx_embedder = MultiLayer(
+        #    self.rng,
+        #    n_in=self.state['n_sym_source']
+        #        if self.prefix.find("enc") >= 0
+        #        else self.state['n_sym_target'],
+        #    n_hids=[self.state['rank_n_approx']],
+        #    activation=[self.state['rank_n_activ']],
+        #    name='{}_approx_embdr'.format(self.prefix),
+        #    **self.default_kwargs)
+        # Maryam
+        n_hids=[self.state['rank_n_approx']]
+        activation=[self.state['rank_n_activ']]
+        if self.state['embd_layer'] > 0 and self.prefix.find("enc") >= 0:
+            n_hids.append(self.state['rank_n_approx'])
+            activation.append(self.state['rank_n_activ'])
         self.approx_embedder = MultiLayer(
             self.rng,
             n_in=self.state['n_sym_source']
                 if self.prefix.find("enc") >= 0
                 else self.state['n_sym_target'],
-            n_hids=[self.state['rank_n_approx']],
-            activation=[self.state['rank_n_activ']],
+            n_hids=n_hids,
+            activation=activation,
             name='{}_approx_embdr'.format(self.prefix),
             **self.default_kwargs)
 
