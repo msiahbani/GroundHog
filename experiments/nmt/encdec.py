@@ -566,30 +566,24 @@ class EncoderDecoderBase(object):
 
     def _create_embedding_layers(self):
         logger.debug("_create_embedding_layers")
-        #self.approx_embedder = MultiLayer(
-        #    self.rng,
-        #    n_in=self.state['n_sym_source']
-        #        if self.prefix.find("enc") >= 0
-        #        else self.state['n_sym_target'],
-        #    n_hids=[self.state['rank_n_approx']],
-        #    activation=[self.state['rank_n_activ']],
-        #    name='{}_approx_embdr'.format(self.prefix),
-        #    **self.default_kwargs)
-        # Maryam
-        n_hids=[self.state['rank_n_approx']]
-        activation=[self.state['rank_n_activ']]
-        if self.state['embd_layer'] > 0 and self.prefix.find("enc") >= 0:
-            n_hids.append(self.state['rank_n_approx'])
-            activation.append(self.state['rank_n_activ'])
         self.approx_embedder = MultiLayer(
             self.rng,
             n_in=self.state['n_sym_source']
                 if self.prefix.find("enc") >= 0
                 else self.state['n_sym_target'],
-            n_hids=n_hids,
-            activation=activation,
+            n_hids=[self.state['rank_n_approx']],
+            activation=[self.state['rank_n_activ']],
             name='{}_approx_embdr'.format(self.prefix),
             **self.default_kwargs)
+        # Maryam
+        if self.state['embd_layer'] > 0 and self.prefix.find("enc") >= 0:
+            self.hidden_approx_embedder = MultiLayer(
+                self.rng,
+                n_in=self.state['rank_n_approx'],
+                n_hids=[self.state['rank_n_approx']],
+                activation=[self.state['rank_n_activ']],
+                name='{}_hidden_approx_embdr'.format(self.prefix),
+                **self.default_kwargs)
 
         # We have 3 embeddings for each word in each level,
         # the one used as input,
@@ -754,6 +748,8 @@ class Encoder(EncoderDecoderBase):
         #   (seq_len, rank_n_approx)
         if not approx_embeddings:
             approx_embeddings = self.approx_embedder(x)
+            if self.state['embd_layer'] > 0:
+                approx_embeddings = self.hidden_approx_embedder(approx_embeddings)
 
         # Low rank embeddings are projected to contribute
         # to input, reset and update signals.
@@ -1338,11 +1334,16 @@ class RNNEncoderDecoder(object):
         self.backward_encoder.create_layers()
 
         logger.debug("Build backward encoding computation graph")
+        
+        approx_embedd = self.encoder.approx_embedder(self.x[::-1])
+        if self.state['embd_layer'] > 0:
+            approx_embedd = self.encoder.hidden_approx_embedder(approx_embedd)
         backward_training_c = self.backward_encoder.build_encoder(
                 self.x[::-1],
                 self.x_mask[::-1],
                 use_noise=True,
-                approx_embeddings=self.encoder.approx_embedder(self.x[::-1]),
+                #approx_embeddings=self.encoder.approx_embedder(self.x[::-1]),
+                approx_embeddings=approx_embedd,
                 return_hidden_layers=True)
         # Reverse time for backward representations.
         backward_training_c.out = backward_training_c.out[::-1]
@@ -1417,8 +1418,11 @@ class RNNEncoderDecoder(object):
             indx_word_src=self.state['indx_word'],
             rng=self.rng)
         self.lm_model.load_dict(self.state)
-        logger.debug("Model params:\n{}".format(
-            pprint.pformat(sorted([p.name for p in self.lm_model.params]))))
+        #ogger.debug("Model params:\n{}".format(
+            #pprint.pformat(sorted([p.name for p in self.lm_model.params]))))
+        logger.debug("Model params:")
+        for p in self.lm_model.params:
+            logger.debug("name: {}, max: {}, min: {}".format(p.name, p.get_value().max(), p.get_value().min()))
         return self.lm_model
 
     def create_representation_computer(self):
