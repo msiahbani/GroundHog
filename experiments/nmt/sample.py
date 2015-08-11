@@ -17,6 +17,8 @@ from experiments.nmt import\
 
 from experiments.nmt.numpy_compat import argpartition
 
+
+
 logger = logging.getLogger(__name__)
 
 class Timer(object):
@@ -237,7 +239,6 @@ def main():
     lm_model = enc_dec.create_lm_model()
     lm_model.load(args.model_path)
     indx_word = cPickle.load(open(state['word_indx'],'rb'))
-
     sampler = None
     beam_search = None
     if args.beam_search:

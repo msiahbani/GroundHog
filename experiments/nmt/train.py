@@ -92,7 +92,7 @@ def main():
                 if state['hookFreq'] >= 0
                 else None)
     if state['load_embd']:
-        main.load_embd("embedding.npz")
+        main.load_embd(state['embd_file'])
     if state['reload']:
         main.load()
     if state['loopIters'] > 0:

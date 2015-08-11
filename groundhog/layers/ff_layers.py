@@ -301,6 +301,276 @@ class MultiLayer(Layer):
         self.out = emb_val
         return emb_val
 
+
+class TensorLayer(Layer):
+    """
+    Implementing a Tensor Neural Network
+    """
+    def __init__(self,
+                 rng,
+                 n_in,
+                 n_hids=[500,500],
+                 activation='TT.tanh',
+                 scale=0.01,
+                 sparsity=-1,
+                 rank_n_approx=0,
+                 rank_n_activ='lambda x: x',
+                 weight_noise=False,
+                 dropout = 1.,
+                 init_fn='sample_weights_classic',
+                 bias_fn='init_bias',
+                 bias_scale = 0.,
+                 learn_bias = True,
+                 grad_scale = 1.,
+                 name=None):
+        """
+        :type rng: numpy random generator
+        :param rng: numpy random generator
+
+        :type n_in: int
+        :param n_in: number of inputs units
+
+        :type n_hids: list of ints
+        :param n_hids: Number of hidden units on each layer of the MLP
+
+        :type activation: string/function or list of
+        :param activation: Activation function for the embedding layers. If
+            a list it needs to have a value for each layer. If not, the same
+            activation will be applied to all layers
+
+        :type scale: float or list of
+        :param scale: depending on the initialization function, it can be
+            the standard deviation of the Gaussian from which the weights
+            are sampled or the largest singular value. If a single value it
+            will be used for each layer, otherwise it has to have one value
+            for each layer
+
+        :type sparsity: int or list of
+        :param sparsity: if a single value, it will be used for each layer,
+            otherwise it has to be a list with as many values as layers. If
+            negative, it means the weight matrix is dense. Otherwise it
+            means this many randomly selected input units are connected to
+            an output unit
+
+        :type weight_noise: bool
+        :param weight_noise: If true, the model is used with weight noise
+            (and the right shared variable are constructed, to keep track of the
+            noise)
+
+        :type dropout: float
+        :param dropout: the probability with which hidden units are dropped
+            from the hidden layer. If set to 1, dropout is not used
+
+        :type init_fn: string or function
+        :param init_fn: function used to initialize the weights of the
+            layer. We recommend using either `sample_weights_classic` or
+            `sample_weights` defined in the utils
+
+        :type bias_fn: string or function
+        :param bias_fn: function used to initialize the biases. We recommend
+            using `init_bias` defined in the utils
+
+        :type bias_scale: float
+        :param bias_scale: argument passed to `bias_fn`, depicting the scale
+            of the initial bias
+
+        :type learn_bias: bool
+        :param learn_bias: flag, saying if we should learn the bias or keep
+            it constant
+
+
+        :type grad_scale: float or theano scalar
+        :param grad_scale: factor with which the gradients with respect to
+            the parameters of this layer are scaled. It is used for
+            differentiating between the different parameters of a model.
+
+        :type name: string
+        :param name: name of the layer (used to name parameters). NB: in
+            this library names are very important because certain parts of the
+            code relies on name to disambiguate between variables, therefore
+            each layer should have a unique name.
+        """
+
+        if type(n_hids) not in (list, tuple):
+            n_hids = [n_hids]
+        n_layers = len(n_hids)
+        self.n_layers = n_layers
+        if type(scale) not in (list, tuple):
+            scale = [scale] * n_layers
+        if type(sparsity) not in (list, tuple):
+            sparsity = [sparsity] * n_layers
+        for idx, sp in enumerate(sparsity):
+            if sp < 0: sparsity[idx] = n_hids[idx]
+        if type(activation) not in (list, tuple):
+            activation = [activation] * n_layers
+        if type(bias_scale) not in (list, tuple):
+            bias_scale = [bias_scale] * n_layers
+        if bias_fn not in (list, tuple):
+            bias_fn = [bias_fn] * n_layers
+        if init_fn not in (list, tuple):
+            init_fn = [init_fn] * n_layers
+
+        for dx in xrange(n_layers):
+            if isinstance(bias_fn[dx],  (str, unicode)):
+                bias_fn[dx] = eval(bias_fn[dx])
+            if isinstance(init_fn[dx], (str, unicode)):
+                init_fn[dx] = eval(init_fn[dx])
+            if isinstance(activation[dx], (str, unicode)):
+                activation[dx] = eval(activation[dx])
+        super(TensorLayer, self).__init__(n_in, n_hids[-1], rng, name)
+        self.trng = RandomStreams(self.rng.randint(int(1e6)))
+        self.activation = activation
+        self.scale = scale
+        self.sparsity = sparsity
+        self.bias_scale = bias_scale
+        self.bias_fn = bias_fn
+        self.init_fn = init_fn
+        self._grad_scale = grad_scale
+        self.weight_noise = weight_noise
+        self.dropout = dropout
+        self.n_hids = n_hids
+        self.learn_bias = learn_bias
+        self._init_params()
+
+    def _init_params(self):
+        """
+        Initialize the parameters of the layer, either by using sparse initialization or small
+        isotropic noise.
+        """
+        self.W_ems = []
+        #self.Q_ems = []
+        #self.R_ems = []
+        #self.b_ems = []
+
+        # if you need rank_n_approx add it here
+        Q_em = self.init_fn[0](self.n_in,
+                   self.n_hids[0],
+                   self.sparsity[0],
+                   self.scale[0],
+                   self.rng)
+        Q_em = theano.shared(Q_em, name='Q_0_%s'%self.name)
+        #self.Q_ems = [Q_em]
+
+        R_em = self.init_fn[0](self.n_in,
+                   self.n_hids[0],
+                   self.sparsity[0],
+                   self.scale[0],
+                   self.rng)
+        R_em = theano.shared(R_em, name='R_0_%s'%self.name)
+        #self.R_ems = [R_em]
+
+        self.W_ems = [Q_em, R_em]
+
+        bq_em = theano.shared(
+            self.bias_fn[0](self.n_hids[0], self.bias_scale[0],self.rng),
+            name='b_q_0_%s'%self.name)
+        br_em = theano.shared(
+            self.bias_fn[0](self.n_hids[0], self.bias_scale[0],self.rng),
+            name='b_r_0_%s'%self.name)
+        self.b_ems = [bq_em, br_em]
+
+        for dx in xrange(1, self.n_layers):
+            #W_em = self.init_fn[dx](self.n_hids[dx-1] / self.pieces[dx],  Maryam
+            Q_em = self.init_fn[dx](self.n_hids[dx-1],
+                                self.n_hids[dx],
+                                self.sparsity[dx],
+                                self.scale[dx],
+                                self.rng)
+            Q_em = theano.shared(Q_em,
+                                      name='Q_%d_%s'%(dx,self.name))
+            R_em = self.init_fn[dx](self.n_hids[dx-1],
+                                self.n_hids[dx],
+                                self.sparsity[dx],
+                                self.scale[dx],
+                                self.rng)
+            R_em = theano.shared(R_em,
+                                      name='R_%d_%s'%(dx,self.name))
+            self.W_ems += [Q_em, R_em]
+
+            bq_em = theano.shared(
+                self.bias_fn[dx](self.n_hids[dx], self.bias_scale[dx],self.rng),
+                name='b_q_%d_%s'%(dx,self.name))
+
+            br_em = theano.shared(
+                self.bias_fn[dx](self.n_hids[dx], self.bias_scale[dx],self.rng),
+                name='b_r_%d_%s'%(dx,self.name))
+
+            self.b_ems += [bq_em, br_em]
+
+        self.params = [x for x in self.W_ems]
+
+        if self.learn_bias and self.learn_bias!='last':
+            self.params = [x for x in self.W_ems] + [x for x in self.b_ems]
+        elif self.learn_bias == 'last':
+            self.params = [x for x in self.W_ems] + [x for x in self.b_ems][:-1]
+
+        self.params_grad_scale = [self._grad_scale for x in self.params]
+        if self.weight_noise:
+            self.nW_ems = [theano.shared(x.get_value()*0, name='noise_'+x.name) for x in self.W_ems]
+            self.nb_ems = [theano.shared(x.get_value()*0, name='noise_'+x.name) for x in self.b_ems]
+
+            self.noise_params = [x for x in self.nW_ems] + [x for x in self.nb_ems]
+            self.noise_params_shape_fn = [constant_shape(x.get_value().shape)
+                            for x in self.noise_params]
+
+
+    def fprop(self, state_below, use_noise=True, no_noise_bias=False,
+            first_only = False):
+        """
+        Constructs the computational graph of this layer.
+        If the input is ints, we assume is an index, otherwise we assume is
+        a set of floats.
+        """
+        if self.weight_noise and use_noise and self.noise_params:
+            W_ems = [(x+y) for x, y in zip(self.W_ems, self.nW_ems)]
+            if not no_noise_bias:
+                b_ems = [(x+y) for x, y in zip(self.b_ems, self.nb_ems)]
+            else:
+                b_ems = self.b_ems
+        else:
+            W_ems = self.W_ems
+            b_ems = self.b_ems
+
+        #FIXME one bias for the whole layer? or we need different biases for each component
+        emb_val1 = utils.dot(state_below, W_ems[0])
+        emb_val2 = utils.dot(state_below, W_ems[1])
+        if b_ems:
+            emb_val1 += b_ems[0]
+            emb_val2 += b_ems[1]
+
+        emb_val1 = self.activation[0](emb_val1)
+        emb_val2 = self.activation[0](emb_val2)
+
+        emb_val = emb_val1 * emb_val2    
+
+        #FIXME make sure how the dropout for tensor networks works
+        if self.dropout < 1.:
+            if use_noise:
+                emb_val = emb_val * self.trng.binomial(emb_val.shape, n=1, p=self.dropout, dtype=emb_val.dtype)
+            else:
+                emb_val = emb_val * self.dropout
+        for dx in xrange(1, self.n_layers):
+            emb_val1 = utils.dot(emb_val, W_ems[2*dx])
+            emb_val2 = utils.dot(emb_val, W_ems[2*dx+1])
+            if b_ems:
+                emb_val1 = emb_val1+ b_ems[2*dx]
+                emb_val2 = emb_val2+ b_ems[2*dx+1]
+            
+            emb_val1 = self.activation[dx](emb_val1)
+            emb_val2 = self.activation[dx](emb_val2)
+
+            emb_val = emb_val1 * emb_val2
+
+            #FIXME make sure how the dropout for tensor networks works
+            if self.dropout < 1.:
+                if use_noise:
+                    emb_val = emb_val * self.trng.binomial(emb_val.shape, n=1, p=self.dropout, dtype=emb_val.dtype)
+                else:
+                    emb_val = emb_val * self.dropout
+        self.out = emb_val
+        return emb_val
+
+
 class LastState(Layer):
     """
     This layer is used to construct the embedding of the encoder by taking

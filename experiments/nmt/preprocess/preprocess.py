@@ -58,8 +58,13 @@ parser.add_argument("-t", "--char", action="store_true",
                     help="character-level processing")
 parser.add_argument("-l", "--lowercase", action="store_true",
                     help="lowercase")
+parser.add_argument("--lowercase_embd", action="store_true",
+                    help="use lowercased embedding for all words in the corpus")
 parser.add_argument("-r", "--reverse-sent", action="store_true",
                     help="reverse sentences (input)")
+
+
+LCDict = {}
 
 
 def open_files():
@@ -111,6 +116,7 @@ def safe_hdf(array, name):
             ds[:] = array
 
 def load_embd(filename, vocab_dict):
+    global LCDict
     inF = open(args.embd_file, "rb")
     rng = numpy.random.RandomState(1234)
     vector_size = 300
@@ -118,23 +124,25 @@ def load_embd(filename, vocab_dict):
     embd_matrix = []
     embd_matrix.append([0.0 for j in range(vector_size)])  #</s> <s> vector
     embd_matrix.append([0.0 for j in range(vector_size)])  #UNK vector
-    first_line = inF.readline()
+    #first_line = inF.readline()
     for line in inF:
         line = line.strip().split()
-        try: 
-          if line[0] in vocab_dict:
-            try:
-                assert len(line) == 301
+        if len(line) == 2: continue			# first line
+        assert len(line) == 301
+        if not args.lowercase_embd:
+            if line[0] in vocab_dict:
                 embd_matrix.append([float(j) for j in line[1:]])
                 vocab.append(line[0])
-            except:
-                print line
-                continue
-          elif line[0] == "</s>": 
-            print "fill the </s> vector"
-            embd_matrix[0] = [float(j) for j in line[1:]]
-        except:
-              print "line is: %s" %line
+            #elif line[0] == "</s>": 
+            #    print "fill the </s> vector"
+            #    embd_matrix[0] = [float(j) for j in line[1:]]
+        else:
+            if line[0] in LCDict:
+                for w in LCDict[line[0]]:
+                    assert w in vocab_dict
+                    embd_matrix.append([float(j) for j in line[1:]])
+                    vocab.append(w)
+                del LCDict[line[0]]
     word_size = len(vocab)+3
     logger.info("Total number of words in vocab %s" % word_size)
     null_symbol = list( numpy.asarray( 
@@ -154,9 +162,17 @@ def load_embd(filename, vocab_dict):
     numpy.savez(filename, **vals)
     return vocab
 
+def updateLCDict(line):
+    global LCDict
+    for w in line.strip().split(' '):
+        wl = w.lower()
+        if wl not in LCDict: LCDict[wl] = {}
+        LCDict[wl][w] = 1
         
 def create_dictionary():
     # Part I: Counting the words
+    global LCDict
+    LCDict = {}
     counters = []
     sentence_counts = []
     global_counter = Counter()
@@ -177,6 +193,8 @@ def create_dictionary():
             for line in input_file:
                 if args.lowercase:
                     line = line.lower()
+                if args.lowercase_embd:
+                    updateLCDict(line)
                 words = None
                 if args.char:
                     words = list(line.strip().decode('utf-8'))
@@ -218,11 +236,12 @@ def create_dictionary():
         vocab_count = combined_counter.most_common()
         if args.embd_file is not None:
             #FIXME
-            vocab_word = load_embd("embedding.npz", dict(vocab_count))
+            tmpdict = dict(vocab_count)
+            vocab_word = load_embd("embedding.npz", tmpdict)
             logger.info("Creating dictionary of given embedding file, containing %d words, covering "
                     "%2.1f%% of the text."
                     % (len(vocab_word)+2,
-                       100.0 * sum([count for word, count in vocab_count]) /
+                       100.0 * sum([tmpdict[word] for word in vocab_word]) /
                        sum(combined_counter.values())))
         else:
             logger.info("Creating dictionary of all words")
@@ -230,6 +249,10 @@ def create_dictionary():
     if vocab_word:
         for i, word in enumerate(vocab_word):
             vocab[word] = i + 2
+        print "uncovered:   ", len(LCDict)
+        for i, (word, count) in enumerate(vocab_count):
+            if word not in vocab:
+                print '%s\t%d' %(word, count)
     else:
         for i, (word, count) in enumerate(vocab_count):
             vocab[word] = i + 2

@@ -216,7 +216,9 @@ def prototype_state():
     # Initialize embbeding layer from already trained model (just containing weights for embbeding)
     state['load_embd'] = False
     # exclude these parameters form update process during decoding
-    state['frozen_params' = []
+    state['frozen_params'] = []
+    # type of the hidden layer in embbeding
+    state['hid_embd_layer'] = 'MultiLayer'
     
 
     return state
@@ -312,7 +314,7 @@ def prototype_search_state_embd():
     state['forward'] = True
     state['backward'] = True
     state['sort_k_batches'] = 20
-    state['prefix'] = 'search50_reverse_embd_'
+    state['prefix'] = 'search50_reverse_embd_hid2_tensor_'
 
 
     state['source'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/binarized_text.en.shuf.h5"]
@@ -325,14 +327,87 @@ def prototype_search_state_embd():
     state['n_sym_source'] = state['null_sym_source'] + 1
 
 
-    state['load_embd'] = True
-    state['reload'] = False
+    #state['load_embd'] = True
+    state['embd_file'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocab89k/embedding.npz"
+    #state['reload'] = False
     state['embd_layer'] = 1
-    state['frozen_params'] = ['W_0_enc_approx_embdr', 'b_0_enc_approx_embdr']
-    state['timeStop'] = 25*60
+    state['hid_embd_layer'] = 'TensorLayer'
+    #state['frozen_params'] = ['W_0_enc_approx_embdr', 'b_0_enc_approx_embdr']
+    state['timeStop'] = 3*60
 
 
     return state
+
+def prototype_search_state_gembd():
+    """This prototype is the configuration used to train the RNNsearch-50 model from the paper
+    'Neural Machine Translation by Jointly Learning to Align and Translate' """
+
+    state = prototype_encdec_state()
+
+    state['dec_rec_layer'] = 'RecurrentLayerWithSearch'
+    state['search'] = True
+    state['last_forward'] = False
+    state['forward'] = True
+    state['backward'] = True
+    state['sort_k_batches'] = 20
+    state['prefix'] = 'search50_reverse_gembd_hid_sepLayer_'
+
+    
+    state['source'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocabGlove/glove.42B/binarized_text.en.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocabGlove/glove.42B/binarized_text.fr.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocabGlove/glove.42B/ivocab.en.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/ivocab.fr.pkl"
+    state['word_indx'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocabGlove/glove.42B/vocab.en.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/vocab.fr.pkl"
+    state['null_sym_source'] = 84817
+    state['n_sym_source'] = state['null_sym_source'] + 1
+
+
+    state['load_embd'] = True
+    state['embd_file'] = "/SSD/siahbanim/nnmt/data/pre-processed/nnmt-shared-task/fr-en/selected-1M/selected50/reversedEN/vocabGlove/glove.42B/embedding.npz"
+    state['reload'] = False
+    state['embd_layer'] = 1
+    #state['hid_embd_layer'] = 'TensorLayer'
+    #state['frozen_params'] = ['W_0_enc_approx_embdr', 'b_0_enc_approx_embdr']
+    state['timeStop'] = 24*60
+
+    return state
+
+def prototype_search_state_cs():
+    """This prototype is the configuration used to train the RNNsearch-50 model from the paper
+    'Neural Machine Translation by Jointly Learning to Align and Translate' """
+
+    state = prototype_encdec_state()
+
+    state['dec_rec_layer'] = 'RecurrentLayerWithSearch'
+    state['search'] = True
+    state['last_forward'] = False
+    state['forward'] = True
+    state['backward'] = True
+    state['sort_k_batches'] = 20
+    state['rank_n_approx'] = 600
+    state['prefix'] = 'search50_cs_'
+
+
+    state['source'] = ["/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/binarized_text.cs.shuf.h5"]
+    state['target'] = ["/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/binarized_text.en.shuf.h5"]
+    state['indx_word'] = "/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/ivocab.cs.pkl"
+    state['indx_word_target'] = "/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/ivocab.en.pkl"
+    state['word_indx'] = "/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/vocab.cs.pkl"
+    state['word_indx_trgt'] = "/SSD/siahbanim/nnmt/cs-en/pre-processed/lc-train/selected50/VCB50K/vocab.en.pkl"
+    state['null_sym_source'] = 50000
+    state['n_sym_source'] = state['null_sym_source'] + 1
+
+
+    #state['load_embd'] = True
+    #state['reload'] = False
+    #state['embd_layer'] = 1
+    #state['frozen_params'] = ['W_0_enc_approx_embdr', 'b_0_enc_approx_embdr']
+    state['timeStop'] = 24*60
+
+
+    return state
+
 
 def prototype_phrase_lstm_state():
     #state = prototype_phrase_state()

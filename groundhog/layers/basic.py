@@ -177,6 +177,7 @@ class Container(object):
                     raise Exception("Shape mismatch: {} != {} for {}"
                             .format(p.get_value().shape, vals[p.name].shape, p.name))
                 p.set_value(vals[p.name])
+                logger.debug("name: {}, max: {}, min: {}".format(p.name, p.get_value().max(), p.get_value().min()))
             else:
                 # FIXME: do not stop loading even if there's a parameter value missing
                 #raise Exception("No parameter {} given".format(p.name))
@@ -197,6 +198,7 @@ class Container(object):
                 if p.get_value().shape != vals[p.name].shape:
                     raise Exception("Shape mismatch: {} != {} for {}".format(p.get_value().shape, vals[p.name].shape, p.name))
                 p.set_value(vals[p.name])
+                logger.debug("name: {}, max: {}, min: {}".format(p.name, p.get_value().max(), p.get_value().min()))
             else:
                 # FIXME: do not stop loading even if there's a parameter value missing
                 #raise Exception("No parameter {} given".format(p.name))
