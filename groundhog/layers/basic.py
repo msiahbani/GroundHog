@@ -178,6 +178,8 @@ class Container(object):
                             .format(p.get_value().shape, vals[p.name].shape, p.name))
                 p.set_value(vals[p.name])
                 logger.debug("name: {}, max: {}, min: {}".format(p.name, p.get_value().max(), p.get_value().min()))
+                if p.name == "W_0_enc_approx_embdr":
+                    logger.debug("name: {}[:13052], max: {}, min: {}".format(p.name, p.get_value()[:20000].max(), p.get_value()[:20000].min()))
             else:
                 # FIXME: do not stop loading even if there's a parameter value missing
                 #raise Exception("No parameter {} given".format(p.name))
@@ -199,6 +201,8 @@ class Container(object):
                     raise Exception("Shape mismatch: {} != {} for {}".format(p.get_value().shape, vals[p.name].shape, p.name))
                 p.set_value(vals[p.name])
                 logger.debug("name: {}, max: {}, min: {}".format(p.name, p.get_value().max(), p.get_value().min()))
+                if p.name == "W_0_enc_approx_embdr":
+                    logger.debug("name: {}[:13052], max: {}, min: {}".format(p.name, p.get_value()[:20000].max(), p.get_value()[:20000].min()))
             else:
                 # FIXME: do not stop loading even if there's a parameter value missing
                 #raise Exception("No parameter {} given".format(p.name))

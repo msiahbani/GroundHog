@@ -137,9 +137,18 @@ class SGD(object):
         logger.debug('took {}'.format(time.time() - st))
 
         self.lr = numpy.float32(1.)
-        new_params = [p - (TT.sqrt(dn2 + eps) / TT.sqrt(gn2 + eps)) * g
-                for p, g, gn2, dn2 in
-                zip(model.params, self.gs, self.gnorm2, self.dnorm2)]
+        #new_params = [p - (TT.sqrt(dn2 + eps) / TT.sqrt(gn2 + eps)) * g
+        #        for p, g, gn2, dn2 in
+        #        zip(model.params, self.gs, self.gnorm2, self.dnorm2)]
+        new_params = []
+        for p, g, gn2, dn2 in zip(model.params, self.gs, self.gnorm2, self.dnorm2):
+            if p.name in self.state['embd_param_names']:
+                dim = self.state['most_freq_words']
+                sub_p = p[:dim] - (TT.sqrt(dn2[:dim] + eps) / TT.sqrt(gn2[:dim] + eps)) * g[:dim]
+                new_p = TT.set_subtensor(p[:dim], sub_p)
+            else: 
+                new_p = p - (TT.sqrt(dn2 + eps) / TT.sqrt(gn2 + eps)) * g
+            new_params.append(new_p)
 
         #updates = zip(model.params, new_params)
         updates = [(p, new_p) for p,new_p in

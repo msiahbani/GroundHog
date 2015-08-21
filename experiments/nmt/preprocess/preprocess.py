@@ -115,35 +115,48 @@ def safe_hdf(array, name):
                                 array.shape, filters=filters)
             ds[:] = array
 
-def load_embd(filename, vocab_dict):
+def load_embd(filename, vocab_dict_frq, vocab_dict_nfrq):
     global LCDict
     inF = open(args.embd_file, "rb")
     rng = numpy.random.RandomState(1234)
     vector_size = 300
-    vocab = []
-    embd_matrix = []
-    embd_matrix.append([0.0 for j in range(vector_size)])  #</s> <s> vector
-    embd_matrix.append([0.0 for j in range(vector_size)])  #UNK vector
+    if args.lowercase_embd: vector_size = 301
+    vocab_frq = ['<s>', 'UNK']
+    vocab_nfrq = []
+    embd_matrix_frq = []
+    embd_matrix_nfrq = []
+    embd_matrix_nfrq.append([0.0 for j in range(vector_size)])  #</s> <s> vector
+    embd_matrix_nfrq.append([0.0 for j in range(vector_size)])  #UNK vector
     #first_line = inF.readline()
     for line in inF:
         line = line.strip().split()
         if len(line) == 2: continue			# first line
         assert len(line) == 301
         if not args.lowercase_embd:
-            if line[0] in vocab_dict:
-                embd_matrix.append([float(j) for j in line[1:]])
-                vocab.append(line[0])
+            if line[0] in vocab_dict_frq:
+                embd_matrix_frq.append([float(j) for j in line[1:]])
+                vocab_frq.append(line[0])
+            elif line[0] in vocab_dict_nfrq:
+                embd_matrix_nfrq.append([float(j) for j in line[1:]])
+                vocab_nfrq.append(line[0])
             #elif line[0] == "</s>": 
             #    print "fill the </s> vector"
             #    embd_matrix[0] = [float(j) for j in line[1:]]
         else:
             if line[0] in LCDict:
                 for w in LCDict[line[0]]:
-                    assert w in vocab_dict
-                    embd_matrix.append([float(j) for j in line[1:]])
-                    vocab.append(w)
+                    assert (w in vocab_dict_frq) or (w in vocab_dict_nfrq)
+		    tmp_vec = [float(j) for j in line[1:]]
+                    if w == line[0]: tmp_vec.append(0)
+                    else: tmp_vec.append(1)
+                    if w in vocab_dict_frq:
+                        embd_matrix_frq.append(tmp_vec)
+                        vocab_frq.append(w)
+                    elif w in vocab_dict_nfrq:
+                        embd_matrix_nfrq.append(tmp_vec)
+                        vocab_nfrq.append(w)
                 del LCDict[line[0]]
-    word_size = len(vocab)+3
+    word_size = len(vocab_frq)+len(vocab_nfrq)+1
     logger.info("Total number of words in vocab %s" % word_size)
     null_symbol = list( numpy.asarray( 
          rng.uniform(
@@ -153,14 +166,15 @@ def load_embd(filename, vocab_dict):
          ),
          dtype=theano.config.floatX
        ) )
-    embd_matrix.append(null_symbol)
-    
+    embd_matrix_frq.append(null_symbol)
+
+    embd_matrix = embd_matrix_frq + embd_matrix_nfrq
     embd_array = numpy.array(embd_matrix, dtype=theano.config.floatX)
     print embd_array.shape
     embd_bias = numpy.zeros(vector_size, dtype=theano.config.floatX)
     vals = {"W_0_enc_approx_embdr": embd_array, "b_0_enc_approx_embdr": embd_bias}
     numpy.savez(filename, **vals)
-    return vocab
+    return vocab_frq+vocab_nfrq
 
 def updateLCDict(line):
     global LCDict
@@ -236,24 +250,31 @@ def create_dictionary():
         vocab_count = combined_counter.most_common()
         if args.embd_file is not None:
             #FIXME
-            tmpdict = dict(vocab_count)
-            vocab_word = load_embd("embedding.npz", tmpdict)
+            frqdict = dict([(w,c) for (w,c) in vocab_count if c>=40])
+            nfrqdict = dict([(w,c) for (w,c) in vocab_count if c < 40])
+            logger.info("%d words with frequency(+3) %d or more " %(len(frqdict)+3,40))
+            assert len(vocab_count) == len(frqdict)+len(nfrqdict)
+            vocab_word = load_embd("embedding.npz", frqdict, nfrqdict)
             logger.info("Creating dictionary of given embedding file, containing %d words, covering "
                     "%2.1f%% of the text."
-                    % (len(vocab_word)+2,
-                       100.0 * sum([tmpdict[word] for word in vocab_word]) /
+                    % (len(vocab_word),
+                       100.0 * sum([frqdict.get(word, 0.0) for word in vocab_word]+[nfrqdict.get(word, 0.0) for word in vocab_word]) /
                        sum(combined_counter.values())))
         else:
             logger.info("Creating dictionary of all words")
-    vocab = {'UNK': 1, '<s>': 0, '</s>': 0}
+
+    vocab = {}
     if vocab_word:
+        # 'UNK' and '<s>'  have been added to vocab_word
         for i, word in enumerate(vocab_word):
-            vocab[word] = i + 2
-        print "uncovered:   ", len(LCDict)
-        for i, (word, count) in enumerate(vocab_count):
-            if word not in vocab:
-                print '%s\t%d' %(word, count)
+            vocab[word] = i
+            if word == '<s>': 
+                print "</s> is covered"
+                vocab['</s>'] = i
+        #for i, (word, count) in enumerate(vocab_count):
+        #    print '%s\t%d' %(word, count)
     else:
+        vocab = {'UNK': 1, '<s>': 0, '</s>': 0}
         for i, (word, count) in enumerate(vocab_count):
             vocab[word] = i + 2
     safe_pickle(vocab, args.dictionary)
