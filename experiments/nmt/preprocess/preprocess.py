@@ -120,13 +120,13 @@ def load_embd(filename, vocab_dict_frq, vocab_dict_nfrq):
     inF = open(args.embd_file, "rb")
     rng = numpy.random.RandomState(1234)
     vector_size = 300
-    if args.lowercase_embd: vector_size = 301
+    if args.lowercase_embd: vector_size += 1
     vocab_frq = ['<s>', 'UNK']
     vocab_nfrq = []
     embd_matrix_frq = []
     embd_matrix_nfrq = []
-    embd_matrix_nfrq.append([0.0 for j in range(vector_size)])  #</s> <s> vector
-    embd_matrix_nfrq.append([0.0 for j in range(vector_size)])  #UNK vector
+    embd_matrix_frq.append([0.0 for j in range(vector_size)])  #</s> <s> vector
+    embd_matrix_frq.append([0.0 for j in range(vector_size)])  #UNK vector
     #first_line = inF.readline()
     for line in inF:
         line = line.strip().split()
@@ -168,13 +168,13 @@ def load_embd(filename, vocab_dict_frq, vocab_dict_nfrq):
        ) )
     embd_matrix_frq.append(null_symbol)
 
-    embd_matrix = embd_matrix_frq + embd_matrix_nfrq
+    embd_matrix = embd_matrix_nfrq + embd_matrix_frq
     embd_array = numpy.array(embd_matrix, dtype=theano.config.floatX)
     print embd_array.shape
     embd_bias = numpy.zeros(vector_size, dtype=theano.config.floatX)
     vals = {"W_0_enc_approx_embdr": embd_array, "b_0_enc_approx_embdr": embd_bias}
     numpy.savez(filename, **vals)
-    return vocab_frq+vocab_nfrq
+    return vocab_nfrq+vocab_frq
 
 def updateLCDict(line):
     global LCDict
