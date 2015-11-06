@@ -1,0 +1,22 @@
+# for train:
+python train.py --proto=<prototype_name>
+
+# example:
+python train.py --proto=prototype_search_state > log.out
+
+# for test:
+python sample.py --source=<test_file> --beam-search --beam-size 10 --trans <output_file> --state <state_file> <model_file>
+
+# example:
+python sample.py --source=/SSD/siahbanim/nnmt/nnmt-shared-task/fr-en/data/dev/reversed/ntst14.en --beam-search --beam-size 10 --trans search50_trans.txt --state search50_state.pkl search50_model.npz
+
+# sample.py run beam search. it starts with beam size 10. If it cannot find
+# the translation, the beam size is increased and it runs the beam search
+# again (until find the translation or reach beam size 640). 
+# If the traning data is small, the trained NMT model might not be able to
+# find translation, in that case I usually copy the input sentence in the
+# output file.
+# --skipInput allows to skip the first sentences of the test file
+
+python sample.py --source=/SSD/siahbanim/nnmt/nnmt-shared-task/fr-en/data/dev/reversed/ntst14.en --beam-search --beam-size 10 --skipInput 2947 --trans search50_trans.txt --state search50_state.pkl search50_model.npz
+

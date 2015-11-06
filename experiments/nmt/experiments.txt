@@ -1,0 +1,28 @@
+# experiments with full data (WMT 2014) containing 12M parallel sent:
+
+trained_models/search50_full/regular
+trained_models/search50_full/reversed    # input source words are reveresed
+
+
+
+# experiments with 1M parallel sentences of Europarl:
+
+trained_models/search50_selected1M
+# in all models:
+# tgt vocab: 30k
+# No of units in embedding layer: 300
+# trained for 1day
+
+# contains: 
+- model_vocab30k                         # source words are not reversed, src vocab: 30k (two models each one was trained for 1 day)
+- model_reversed_vocab78k                # source words are reversed, src vcb: 78k (two models each one was trained for 1 day) 
+- model_reverse_embd/                    # reversed, src vcb: 78k, initialized with word embedding (skip-gram trained on 12M source sents)
+- model_reverse_embd_frz                 # reversed, src vcb: 78k, initialized with word embedding, * embedding layer is not updated during training
+- model_reverse_embd_2h                  # reversed, src vcb: 78k, initialized with word embedding, 2 hidden layers in embedding layer (FF)
+- model_reverse_embd_2h_frz              # reversed, src vcb: 78k, initialized with word embedding, 2 hidden layers, * embedding layer is not updated during training
+- model_reverse_embd_2h_tensor           # reversed, src vcb: 78k, initialized with word embedding, 2 hidden layers (second layer is tensor)
+- model_reverse_gembd_2h                 # reversed, src vcb: 78k, initialized with glove word embedding, 2 hidden layers
+- model_reverse_gembd_2h                 # reversed, src vcb: 78k, initialized with glove word embedding, 2 hidden layers
+- model_reverse_gembd_2h_bin             # reversed, src vcb: 78k, initialized with glove word embedding, 2 hidden layers, binary feat for lower/upper cases
+- model_reverse_gembd_2h_bin_sort        # reversed, src vcb: 78k, initialized with glove word embedding, 2 hidden layers, binary feat for lower/upper cases, embedding for low frequent words is not updated during training
+
